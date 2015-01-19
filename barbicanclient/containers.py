@@ -223,7 +223,7 @@ class Container(ContainerFormatter):
                   .format(self._container_ref))
         base.validate_ref(self._container_ref, 'Container')
         try:
-            response = self._api._get(self._container_ref)
+            response = self._api.get(self._container_ref)
         except AttributeError:
             raise LookupError('Container {0} could not be found.'
                               .format(self._container_ref))

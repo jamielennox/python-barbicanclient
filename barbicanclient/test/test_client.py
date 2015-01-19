@@ -120,13 +120,17 @@ class WhenTestingClientPost(TestClientWithSession):
         self.httpclient = client._HTTPClient(self.session, self.endpoint)
 
     def test_post_normalizes_url_with_traling_slash(self):
-        self.httpclient._post(path='secrets', data={'test_data': 'test'})
+        self.httpclient.post(self.session,
+                             path='secrets',
+                             json={'test_data': 'test'})
         args, kwargs = self.session.post.call_args
         url = args[0]
         self.assertTrue(url.endswith('/'))
 
     def test_post_includes_content_type_header_of_application_json(self):
-        self.httpclient._post(path='secrets', data={'test_data': 'test'})
+        self.httpclient.post(self.session,
+                             'secrets',
+                             json={'test_data': 'test'})
         args, kwargs = self.session.post.call_args
         headers = kwargs.get('headers')
         self.assertIn('Content-Type', headers.keys())
@@ -134,14 +138,18 @@ class WhenTestingClientPost(TestClientWithSession):
 
     def test_post_includes_default_headers(self):
         self.httpclient._default_headers = {'Test-Default-Header': 'test'}
-        self.httpclient._post(path='secrets', data={'test_data': 'test'})
+        self.httpclient.post(self.session,
+                             'secrets',
+                             json={'test_data': 'test'})
         args, kwargs = self.session.post.call_args
         headers = kwargs.get('headers')
         self.assertIn('Test-Default-Header', headers.keys())
 
     def test_post_checks_status_code(self):
         self.httpclient._check_status_code = mock.MagicMock()
-        self.httpclient._post(path='secrets', data={'test_data': 'test'})
+        self.httpclient.post(self.session,
+                             'secrets',
+                             json={'test_data': 'test'})
         resp = self.session.post()
         self.httpclient._check_status_code.assert_called_with(resp)
 
@@ -222,28 +230,28 @@ class WhenTestingClientDelete(TestClientWithSession):
         self.href = 'http://test_href'
 
     def test_delete_uses_href_as_is(self):
-        self.httpclient._delete(self.href)
+        self.httpclient.delete(self.href)
         args, kwargs = self.session.delete.call_args
         url = args[0]
         self.assertEqual(url, self.href)
 
     def test_delete_passes_json(self):
         json = '{"test": "test"}'
-        self.httpclient._delete(self.href, json=json)
+        self.httpclient.delete(self.href, json=json)
         args, kwargs = self.session.delete.call_args
         passed_json = kwargs.get('json')
         self.assertEqual(passed_json, json)
 
     def test_delete_includes_default_headers(self):
         self.httpclient._default_headers = {'Test-Default-Header': 'test'}
-        self.httpclient._delete(self.href)
+        self.httpclient.delete(self.href)
         args, kwargs = self.session.delete.call_args
         headers = kwargs.get('headers')
         self.assertIn('Test-Default-Header', headers.keys())
 
     def test_delete_checks_status_code(self):
         self.httpclient._check_status_code = mock.MagicMock()
-        self.httpclient._delete(self.href)
+        self.httpclient.delete(self.href)
         resp = self.session.get()
         self.httpclient._check_status_code.assert_called_with(resp)
 

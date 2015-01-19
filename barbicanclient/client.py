@@ -16,6 +16,7 @@ import json
 import logging
 import os
 
+from keystoneclient import adapter
 from keystoneclient.auth.base import BaseAuthPlugin
 from keystoneclient import session as ks_session
 
@@ -57,13 +58,13 @@ class HTTPAuthError(HTTPError):
     pass
 
 
-class _HTTPClient(object):
+class _HTTPClient(adapter.Adapter):
 
-    def __init__(self, session, endpoint=None, project_id=None,
-                 verify=True, service_type=_DEFAULT_SERVICE_TYPE,
-                 service_name=None, interface=_DEFAULT_SERVICE_INTERFACE,
-                 region_name=None):
-        self._session = session
+    def __init__(self, session, endpoint=None, project_id=None, **kwargs):
+        kwargs.setdefault('interface', _DEFAULT_SERVICE_INTERFACE)
+        kwargs.setdefault('service_type', _DEFAULT_SERVICE_TYPE)
+
+        super(_HTTPClient, self).__init__(session, **kwargs)
 
         if project_id is None:
             self._default_headers = dict()
@@ -71,44 +72,57 @@ class _HTTPClient(object):
             # If provided we'll include the project ID in all requests.
             self._default_headers = {'X-Project-Id': project_id}
 
-        if not endpoint:
-            endpoint = session.get_endpoint(service_type=service_type,
-                                            service_name=service_name,
-                                            interface=interface,
-                                            region_name=region_name)
+    @property
+    def _barbican_endpoint(self):
+        endpoint = self.get_endpoint()
 
         if endpoint.endswith('/'):
             endpoint = endpoint[:-1]
 
-        self._barbican_endpoint = endpoint
-        self._base_url = '{0}/{1}'.format(endpoint, _DEFAULT_API_VERSION)
+        return endpoint
 
-    def _get(self, href, params=None):
-        headers = {'Accept': 'application/json'}
-        headers.update(self._default_headers)
-        resp = self._session.get(href, params=params, headers=headers)
-        self._check_status_code(resp)
-        return resp.json()
+    @property
+    def _base_url(self):
+        return '{0}/{1}'.format(self._barbican_endpoint, _DEFAULT_API_VERSION)
 
-    def _get_raw(self, href, headers):
-        headers.update(self._default_headers)
-        resp = self._session.get(href, headers=headers)
-        self._check_status_code(resp)
-        return resp.content
+    def request(self, *args, **kwargs):
+        kwargs.setdefault('raise_exc', False)
 
-    def _delete(self, href, json=None):
-        headers = dict()
+        headers = kwargs.setdefault('headers', {})
         headers.update(self._default_headers)
-        resp = self._session.delete(href, headers=headers, json=json)
+
+        resp = super(_HTTPClient, self).request(self, *args, **kwargs)
+
         self._check_status_code(resp)
 
-    def _post(self, path, data):
-        url = '{0}/{1}/'.format(self._base_url, path)
-        headers = {'Content-Type': 'application/json'}
-        headers.update(self._default_headers)
-        resp = self._session.post(url, data=json.dumps(data), headers=headers)
-        self._check_status_code(resp)
-        return resp.json()
+        return resp
+
+    # def _get(self, href, params=None):
+    #     headers = {'Accept': 'application/json'}
+    #     headers.update(self._default_headers)
+    #     resp = self._session.get(href, params=params, headers=headers)
+    #     self._check_status_code(resp)
+    #     return resp.json()
+
+    # def _get_raw(self, href, headers):
+    #     headers.update(self._default_headers)
+    #     resp = self._session.get(href, headers=headers)
+    #     self._check_status_code(resp)
+    #     return resp.content
+
+    # def _delete(self, href, json=None):
+    #     headers = dict()
+    #     headers.update(self._default_headers)
+    #     resp = self._session.delete(href, headers=headers, json=json)
+    #     self._check_status_code(resp)
+
+    # def _post(self, path, data):
+    #     url = '{0}/{1}/'.format(self._base_url, path)
+    #     headers = {'Content-Type': 'application/json'}
+    #     headers.update(self._default_headers)
+    #     resp = self._session.post(url, data=json.dumps(data), headers=headers)
+    #     self._check_status_code(resp)
+    #     return resp.json()
 
     def _check_status_code(self, resp):
         status = resp.status_code

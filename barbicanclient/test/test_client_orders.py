@@ -123,7 +123,7 @@ class WhenTestingKeyOrders(OrdersTestCase):
                          order_req['meta']['payload_content_type'])
 
     def test_should_submit_via_attributes(self):
-        self.api._post.return_value = {'order_ref': self.order_ref}
+        self.api.post.return_value = {'order_ref': self.order_ref}
 
         order = self.manager.create_key()
         order.name = 'name'
@@ -220,7 +220,7 @@ class WhenTestingOrderManager(OrdersTestCase):
         # Verify the correct URL was used to make the call.
         args, kwargs = self.api._get.call_args
         url = args[0]
-        self.assertEqual(self.api._base_url + '/orders', url)
+        self.assertEqual('orders', url)
 
         # Verify that correct information was sent in the call.
         params = args[1]
@@ -231,7 +231,7 @@ class WhenTestingOrderManager(OrdersTestCase):
         self.manager.delete(order_ref=self.order_ref)
 
         # Verify the correct URL was used to make the call.
-        args, kwargs = self.api._delete.call_args
+        args, kwargs = self.api.delete.call_args
         url = args[0]
         self.assertEqual(self.order_ref, url)
 
@@ -239,6 +239,6 @@ class WhenTestingOrderManager(OrdersTestCase):
         self.assertRaises(ValueError, self.manager.delete, None)
 
     def test_should_get_total(self):
-        self.api._get.return_value = {'total': 1}
+        self.api.get.return_value = {'total': 1}
         total = self.manager.total()
         self.assertEqual(total, 1)
