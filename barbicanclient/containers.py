@@ -74,15 +74,17 @@ class Container(ContainerFormatter):
     _entity = 'containers'
     _type = 'generic'
 
-    def __init__(self, api, name=None, secrets=None, consumers=None,
-                 container_ref=None, created=None, updated=None, status=None,
-                 secret_refs=None):
+    def __init__(self, api, secrets_manager, name=None, secrets=None,
+                 consumers=None, container_ref=None, created=None,
+                 updated=None, status=None, secret_refs=None):
         self._api = api
         self._name = name
         self._container_ref = container_ref
         self._secret_refs = secret_refs
         self._cached_secrets = dict()
         self._initialize_secrets(secrets)
+        self._secrets_manager = secrets_manager
+
         if container_ref:
             self._consumers = consumers if consumers else list()
             self._created = parse_isotime(created) if created else None
@@ -95,11 +97,11 @@ class Container(ContainerFormatter):
             self._status = None
 
     def _initialize_secrets(self, secrets):
-        try:
-            self._fill_secrets_from_secret_refs()
-        except Exception:
-            raise ValueError("One or more of the provided secret_refs could "
-                             "not be retrieved!")
+        # try:
+        self._fill_secrets_from_secret_refs()
+        # except Exception:
+        #     raise ValueError("One or more of the provided secret_refs could "
+        #                      "not be retrieved!")
         if secrets:
             try:
                 for name, secret in six.iteritems(secrets):
@@ -111,8 +113,8 @@ class Container(ContainerFormatter):
     def _fill_secrets_from_secret_refs(self):
         if self._secret_refs:
             self._cached_secrets = dict(
-                (name.lower(), self._api.secrets.get(secret_ref=secret_ref))
-                for name, secret_ref in six.iteritems(self._secret_refs)
+                (name.lower(), self._secrets_manager.get(secret_ref=ref))
+                for name, ref in six.iteritems(self._secret_refs)
             )
 
     @property
@@ -191,14 +193,14 @@ class Container(ContainerFormatter):
         LOG.debug("Request body: {0}".format(container_dict))
 
         # Save, store container_ref and return
-        response = self._api._post(self._entity, container_dict)
+        response = self._api.post(self._entity, json=container_dict).json()
         if response:
             self._container_ref = response['container_ref']
         return self.container_ref
 
     def delete(self):
         if self._container_ref:
-            self._api._delete(self._container_ref)
+            self._api.delete(self._container_ref)
             self._container_ref = None
             self._status = None
             self._created = None
@@ -512,7 +514,7 @@ class ContainerManager(base.BaseEntityManager):
                   .format(container_ref))
         base.validate_ref(container_ref, 'Container')
         try:
-            response = self._api._get(container_ref)
+            response = self._api.get(container_ref).json()
         except AttributeError:
             raise LookupError('Container {0} could not be found.'
                               .format(container_ref))
@@ -650,7 +652,7 @@ class ContainerManager(base.BaseEntityManager):
         """
         if not container_ref:
             raise ValueError('container_ref is required.')
-        self._api._delete(container_ref)
+        self._api.delete(container_ref)
 
     def list(self, limit=10, offset=0, name=None, type=None):
         """
@@ -664,14 +666,13 @@ class ContainerManager(base.BaseEntityManager):
         """
         LOG.debug('Listing containers - offset {0} limit {1} name {2} type {3}'
                   .format(offset, limit, name, type))
-        href = '{0}/{1}'.format(self._api._base_url, self._entity)
         params = {'limit': limit, 'offset': offset}
         if name:
             params['name'] = name
         if type:
             params['type'] = type
 
-        response = self._api._get(href, params)
+        response = self._api.get(self._entity, params=params).json()
 
         return [self._generate_typed_container(container)
                 for container in response.get('containers', [])]
@@ -693,7 +694,7 @@ class ContainerManager(base.BaseEntityManager):
         consumer_dict['name'] = name
         consumer_dict['URL'] = url
 
-        response = self._api._post(href, consumer_dict)
+        response = self._api.post(href, json=consumer_dict).json()
         return self._generate_typed_container(response)
 
     def remove_consumer(self, container_ref, name, url):
@@ -706,12 +707,11 @@ class ContainerManager(base.BaseEntityManager):
         """
         LOG.debug('Deleting consumer registration for container '
                   '{0} as {1}: {2}'.format(container_ref, name, url))
-        href = '{0}/{1}/{2}/consumers'.format(self._api._base_url,
-                                              self._entity,
-                                              container_ref.split('/')[-1])
+        href = '{0}/{1}/consumers'.format(self._entity,
+                                          container_ref.split('/')[-1])
         consumer_dict = {
             'name': name,
             'URL': url
         }
 
-        self._api._delete(href, json=consumer_dict)
+        self._api.delete(href, json=consumer_dict)

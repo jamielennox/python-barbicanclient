@@ -63,6 +63,7 @@ class _HTTPClient(adapter.Adapter):
     def __init__(self, session, endpoint=None, project_id=None, **kwargs):
         kwargs.setdefault('interface', _DEFAULT_SERVICE_INTERFACE)
         kwargs.setdefault('service_type', _DEFAULT_SERVICE_TYPE)
+        kwargs.setdefault('endpoint_override', endpoint)
 
         super(_HTTPClient, self).__init__(session, **kwargs)
 
@@ -71,8 +72,6 @@ class _HTTPClient(adapter.Adapter):
         else:
             # If provided we'll include the project ID in all requests.
             self._default_headers = {'X-Project-Id': project_id}
-
-        self.endpoint_override = self._base_url
 
     @property
     def _barbican_endpoint(self):
@@ -206,7 +205,7 @@ class Client(object):
 
         self.secrets = secrets.SecretManager(httpclient)
         self.orders = orders.OrderManager(httpclient)
-        self.containers = containers.ContainerManager(httpclient)
+        self.containers = containers.ContainerManager(httpclient, self.secrets)
 
 
 def env(*vars, **kwargs):

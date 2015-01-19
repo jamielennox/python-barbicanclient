@@ -335,11 +335,11 @@ class BaseEntityResource(testtools.TestCase):
     def _setUp(self, entity):
         super(BaseEntityResource, self).setUp()
         self.responses = self.useFixture(fixture.Fixture())
-        self.endpoint = 'http://localhost:9311'
+        self.endpoint = 'http://localhost:9311/v1'
         self.project_id = '1234567'
 
         self.entity = entity
-        self.entity_base = self.endpoint + "/v1/" + self.entity
+        self.entity_base = self.endpoint + "/" + self.entity
         self.entity_href = self.entity_base + \
             '/abcd1234-eabc-5678-9abc-abcdef012345'
 
