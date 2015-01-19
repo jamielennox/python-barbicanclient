@@ -215,7 +215,8 @@ class Secret(SecretFormatter):
                              "secret does not specify a 'default' "
                              "content-type.")
         headers = {'Accept': self.payload_content_type}
-        self._payload = self._api.get(self._secret_ref, headers).content
+        self._payload = self._api.get(self._secret_ref,
+                                      headers=headers).content
 
     @immutable_after_save
     def store(self):
@@ -383,7 +384,7 @@ class SecretManager(base.BaseEntityManager):
         if bits > 0:
             params['bits'] = bits
 
-        response = self._api.get(self._entity, params)
+        response = self._api.get(self._entity, params=params)
 
         return [
             Secret(api=self._api, **s)

@@ -72,6 +72,8 @@ class _HTTPClient(adapter.Adapter):
             # If provided we'll include the project ID in all requests.
             self._default_headers = {'X-Project-Id': project_id}
 
+        self.endpoint_override = self._base_url
+
     @property
     def _barbican_endpoint(self):
         endpoint = self.get_endpoint()
@@ -91,7 +93,7 @@ class _HTTPClient(adapter.Adapter):
         headers = kwargs.setdefault('headers', {})
         headers.update(self._default_headers)
 
-        resp = super(_HTTPClient, self).request(self, *args, **kwargs)
+        resp = super(_HTTPClient, self).request(*args, **kwargs)
 
         self._check_status_code(resp)
 

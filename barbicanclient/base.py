@@ -50,8 +50,7 @@ class BaseEntityManager(object):
         """
         Returns the total number of entities stored in Barbican.
         """
-        href = '{0}/{1}'.format(self._api._base_url, self._entity)
         params = {'limit': 0, 'offset': 0}
-        resp = self._api._get(href, params)
+        resp = self._api.get(self._entity, json=params).json()
 
         return resp['total']

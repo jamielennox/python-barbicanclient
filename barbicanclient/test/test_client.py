@@ -12,6 +12,10 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from keystoneclient.auth import token_endpoint
+from keystoneclient import session
+
 import mock
 from requests_mock.contrib import fixture
 import testtools
@@ -335,9 +339,10 @@ class BaseEntityResource(testtools.TestCase):
         self.project_id = '1234567'
 
         self.entity = entity
-        self.entity_base = self.endpoint + "/" + self.entity + "/"
+        self.entity_base = self.endpoint + "/v1/" + self.entity
         self.entity_href = self.entity_base + \
-            'abcd1234-eabc-5678-9abc-abcdef012345'
+            '/abcd1234-eabc-5678-9abc-abcdef012345'
 
-        self.api = mock.MagicMock()
-        self.api._base_url = self.endpoint
+        auth = token_endpoint.Token(self.endpoint, 'aToken')
+        self.session = session.Session(auth=auth)
+        self.client = client.Client(session=self.session)
